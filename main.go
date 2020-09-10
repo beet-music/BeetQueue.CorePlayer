@@ -8,10 +8,11 @@ import (
 
 var options struct {
 	// program options
-	Verbose   []bool   `short:"v" long:"verbose" description:"Show verbose information"`
-	Player    string   `short:"p" long:"player" description:"The program to use for playback" default:"ffplay"`
-	Libraries []string `short:"l" long:"library" description:"The location of the music library" default:"."`
-	GoodExt   []string `short:"e" long:"ext" descruption:"Known good extentions" default:".mp3" default:".m4a" default:".ogg" default:".wav" default:".flac"`
+	Verbose    []bool   `short:"v" long:"verbose" description:"Show verbose information"`
+	Player     string   `short:"p" long:"player" description:"The program to use for playback" default:"ffplay"`
+	PlayerArgs []string `long:"player-args" description:"The arguments to pass to the player" default:"-autoexit"`
+	Libraries  []string `short:"l" long:"library" description:"The location of the music library" default:"."`
+	GoodExt    []string `short:"e" long:"ext" descruption:"Known good extentions" default:".mp3" default:".m4a" default:".ogg" default:".wav" default:".flac"`
 
 	// cloud options
 	Server string `short:"s" long:"server" description:"The location of the BeetrootCloud gateway" default:"cloud.beetroot.app"`
@@ -35,6 +36,4 @@ func main() {
 		walkFolders(&library, folder, &options.GoodExt)
 	}
 	fmt.Printf("Found %d tracks in %d libraries.\n", len(library), len(options.Libraries))
-
-	//
 }

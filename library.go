@@ -2,14 +2,29 @@ package main
 
 import (
 	"errors"
+	"hash/fnv"
 	"os"
-	"strings"
 
 	"github.com/mikkyang/id3-go"
 )
 
 type TrackInfo struct {
-	Filename, Title, Artist string
+	Filename string
+	Title    string
+	Artist   string
+}
+
+func hashString(s string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return h.Sum32()
+}
+
+/*
+UniqueID returns a unique identifier for this track.
+*/
+func (trackInfo *TrackInfo) UniqueID() string {
+	return hashString(trackInfo.Filename + ":" + trackInfo.Artist + ":" + trackInfo.Title)
 }
 
 func TrackInfoFrom(file string) (trackInfo TrackInfo, err error) {
@@ -71,10 +86,6 @@ func walkFolders(library *[]string, path string, knownExt *[]string) error {
 		} else {
 			// otherwise, check its extention and add it to the library
 			for _, ext := range *knownExt {
-				if !strings.HasSuffix(thisFile.Name(), ext) {
-					continue
-				}
-
 				*library = append(*library, path+"/"+thisFile.Name())
 				break
 			}

@@ -45,7 +45,7 @@ func (session *CloudSession) UploadLibrary(library *[]string) {
 Close ... Ends the session on the server.
 */
 func (session *CloudSession) Close() {
-	session.Closed = true
+	session.closed = true
 
 	// TODO: send a request to close the client and destroy HTTP client
 }

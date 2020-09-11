@@ -9,6 +9,9 @@ import (
 	"github.com/dhowden/tag"
 )
 
+/*
+TrackInfo contains details about the track
+*/
 type TrackInfo struct {
 	Filename string
 	Title    string
@@ -126,7 +129,7 @@ func walkFolders(
 			// get the metadata for this file and add it to the library
 			thisTrack, err := TrackInfoFrom(thisPath)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s: major error: %w\n", thisPath, err)
+				fmt.Fprintf(os.Stderr, "%s: major error: %s\n", thisPath, err.Error())
 				continue
 			}
 

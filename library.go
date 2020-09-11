@@ -2,10 +2,11 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"hash/fnv"
 	"os"
 
-	"github.com/mikkyang/id3-go"
+	"github.com/dhowden/tag"
 )
 
 type TrackInfo struct {
@@ -23,16 +24,22 @@ func hashString(s string) uint32 {
 /*
 UniqueID returns a unique identifier for this track.
 */
-func (trackInfo *TrackInfo) UniqueID() string {
-	return hashString(trackInfo.Filename + ":" + trackInfo.Artist + ":" + trackInfo.Title)
+func (trackInfo *TrackInfo) UniqueID() uint32 {
+	return hashString(
+		trackInfo.Filename +
+			":" + trackInfo.Artist +
+			":" + trackInfo.Title)
 }
 
-func TrackInfoFrom(file string) (trackInfo TrackInfo, err error) {
-	trackInfo = TrackInfo{file, "", ""}
+/*
+TrackInfoFrom generates a track record from a file.
+*/
+func TrackInfoFrom(path string) (trackInfo TrackInfo, err error) {
+	trackInfo = TrackInfo{path, "", ""}
 	err = nil
 
 	// get file details
-	stat, err := os.Stat(file)
+	stat, err := os.Stat(path)
 	if err != nil {
 		return
 	}
@@ -42,19 +49,41 @@ func TrackInfoFrom(file string) (trackInfo TrackInfo, err error) {
 		return
 	}
 
+	// open the file
+	file, err := os.Open(path)
+	if err != nil {
+		return
+	}
+
 	// open the file to get details
-	tags, id3Err := id3.Open(file)
-	if id3Err == nil {
-		trackInfo.Title = tags.Title()
-		trackInfo.Artist = tags.Artist()
-	} else {
+	meta, err := tag.ReadFrom(file)
+	if err != nil {
+		if verboseLevel > 1 {
+			fmt.Fprintf(
+				os.Stderr,
+				"%s: failed to read metadata (%s)\n",
+				path, err.Error())
+		}
+
 		trackInfo.Title = stat.Name()
+		err = nil
+	} else {
+		trackInfo.Title = meta.Title()
+		trackInfo.Artist = meta.Artist()
 	}
 
 	return
 }
 
-func walkFolders(library *[]string, path string, knownExt *[]string) error {
+type isAcceptable func(path string) bool
+
+func walkFolders(
+	library *[]TrackInfo,
+	path string,
+	isAcceptable isAcceptable) error {
+	// TODO: rewrite this function to follow an iterative approch, that way we
+	// won't run the risk of
+
 	// get the file info for this file
 	file, err := os.Open(path)
 	if err != nil {
@@ -77,18 +106,31 @@ func walkFolders(library *[]string, path string, knownExt *[]string) error {
 	}
 
 	for _, thisFile := range files {
+		thisPath := path + "/" + thisFile.Name()
+
 		// if the file is a folder, recurse
 		if thisFile.IsDir() {
-			err := walkFolders(library, path+"/"+thisFile.Name(), knownExt)
+			err := walkFolders(library, thisPath, isAcceptable)
 			if err != nil {
 				return err
 			}
 		} else {
-			// otherwise, check its extention and add it to the library
-			for _, ext := range *knownExt {
-				*library = append(*library, path+"/"+thisFile.Name())
-				break
+			// check if the file is acceptable and skip if not
+			if !isAcceptable(thisPath) {
+				if verboseLevel > 1 {
+					fmt.Fprintf(os.Stderr, "\"%s\" is unacceptable.\n", thisPath)
+				}
+				continue
 			}
+
+			// get the metadata for this file and add it to the library
+			thisTrack, err := TrackInfoFrom(thisPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s: major error: %w\n", thisPath, err)
+				continue
+			}
+
+			*library = append(*library, thisTrack)
 		}
 	}
 
